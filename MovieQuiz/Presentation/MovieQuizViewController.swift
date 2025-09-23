@@ -4,7 +4,7 @@ final class MovieQuizViewController: UIViewController {
     @IBOutlet private var imageView: UIImageView!
     @IBOutlet private var textLabel: UILabel!
     @IBOutlet private var counterLabel: UILabel!
-    @IBOutlet private var yesButton: UIButton! // Добавляем outlet для кнопки "Да"
+    @IBOutlet private var yesButton: UIButton! 
     @IBOutlet private var noButton: UIButton!
     
     // метод вызывается, когда пользователь нажимает на кнопку "Да"

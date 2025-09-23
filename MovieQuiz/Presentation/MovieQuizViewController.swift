@@ -4,9 +4,14 @@ final class MovieQuizViewController: UIViewController {
     @IBOutlet private var imageView: UIImageView!
     @IBOutlet private var textLabel: UILabel!
     @IBOutlet private var counterLabel: UILabel!
+    @IBOutlet private var yesButton: UIButton! // Добавляем outlet для кнопки "Да"
+    @IBOutlet private var noButton: UIButton!
     
     // метод вызывается, когда пользователь нажимает на кнопку "Да"
     @IBAction private func yesButtonClicked(_ sender: UIButton) {
+        // Блокируем кнопки сразу при нажатии
+        setButtonsEnabled(false)
+        
         let currentQuestion = questions[currentQuestionIndex] // 1
         let givenAnswer = true // 2
         
@@ -15,17 +20,30 @@ final class MovieQuizViewController: UIViewController {
     
     // метод вызывается, когда пользователь нажимает на кнопку "Нет"
     @IBAction private func noButtonClicked(_ sender: UIButton) {
+        // Блокируем кнопки сразу при нажатии
+        setButtonsEnabled(false)
+        
         let currentQuestion = questions[currentQuestionIndex] // 1
         let givenAnswer = false // 2
         
         showAnswerResult(isCorrect: givenAnswer == currentQuestion.correctAnswer) // 3
     }
     
+    // Метод для включения/выключения кнопок
+        private func setButtonsEnabled(_ enabled: Bool) {
+            yesButton.isEnabled = enabled
+            noButton.isEnabled = enabled
+            
+            yesButton.alpha = enabled ? 1.0 : 0.5
+            noButton.alpha = enabled ? 1.0 : 0.5
+        }
+    
     
     
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
+        imageView.layer.cornerRadius = 20
         let currentQuestion = questions[currentQuestionIndex]
         let viewModel = convert(model: currentQuestion)
         show(quiz: viewModel)
@@ -123,6 +141,9 @@ final class MovieQuizViewController: UIViewController {
         imageView.image = step.image
         textLabel.text = step.question
         counterLabel.text = step.questionNumber
+        
+        // Включаем кнопки после отображения нового вопроса
+        setButtonsEnabled(true)
     }
     
     // приватный метод, который меняет цвет рамки
@@ -135,7 +156,7 @@ final class MovieQuizViewController: UIViewController {
         imageView.layer.masksToBounds = true // 1
         imageView.layer.borderWidth = 8 // 2
         imageView.layer.borderColor = isCorrect ? UIColor.ypGreen.cgColor : UIColor.ypRed.cgColor // 3
-        imageView.layer.cornerRadius = 20 // 4
+       // imageView.layer.cornerRadius = 20 // 4
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             self.showNextQuestionOrResults()

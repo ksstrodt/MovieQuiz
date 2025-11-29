@@ -7,8 +7,9 @@
 
 import Foundation
 
-class QuestionFactory: QuestionFactoryProtocol {
+final class QuestionFactory: QuestionFactoryProtocol {
     
+   /*
     private let questions: [QuizQuestion] = [
         QuizQuestion(
             image: "The Godfather",
@@ -51,46 +52,74 @@ class QuestionFactory: QuestionFactoryProtocol {
             text: "Рейтинг этого фильма больше чем 6?",
             correctAnswer: false)
     ]
+    */
+
     
-    // Массив для отслеживания уже заданных вопросов
-   private var usedQuestions: [QuizQuestion] = []
-    // Массив доступных вопросов (изначально все вопросы)
-   private var availableQuestions: [QuizQuestion] = []
+    private let moviesLoader: MoviesLoading
+    private weak var delegate: QuestionFactoryDelegate?
+    private var movies: [MostPopularMovie] = []
     
-   init() {
-        resetQuestions()
+    init(moviesLoader: MoviesLoading, delegate: QuestionFactoryDelegate?) {
+        self.moviesLoader = moviesLoader
+        self.delegate = delegate
     }
     
-    weak var delegate: QuestionFactoryDelegate?
+    func loadData() {
+        moviesLoader.loadMovies { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                switch result {
+                case .success(let mostPopularMovies):
+                    self.movies = mostPopularMovies.items // сохраняем фильм в нашу новую переменную
+                    self.delegate?.didLoadDataFromServer() // сообщаем, что данные загрузились
+                case .failure(let error):
+                    self.delegate?.didFailToLoadData(with: error) // сообщаем об ошибке нашему MovieQuizViewController
+                }
+            }
+        }
+    }
     
     func requestNextQuestion() {
-           // Если доступные вопросы закончились, возвращаем nil
-           guard !availableQuestions.isEmpty else {
-               delegate?.didReceiveNextQuestion(question: nil)
-               return
-           }
+        DispatchQueue.global().async { [weak self] in
+            guard let self = self else { return }
+            
+            // Проверяем, что есть фильмы для загрузки
+                   guard !self.movies.isEmpty else {
+                       DispatchQueue.main.async {
+                           self.delegate?.didFailToLoadData(with: NSError(domain: "No movies available", code: 0))
+                       }
+                       return
+                   }
+            let index = (0..<self.movies.count).randomElement() ?? 0
+            
+            guard let movie = self.movies[safe: index] else { return }
+            
+            var imageData = Data()
            
-           // Выбираем случайный вопрос из доступных
-           guard let randomIndex = (0..<availableQuestions.count).randomElement() else {
-              delegate?.didReceiveNextQuestion(question: nil)
-               return
-          }
-           
-           let question = availableQuestions[randomIndex]
-           
-           // Удаляем заданный вопрос из доступных и добавляем в использованные
-          availableQuestions.remove(at: randomIndex)
-           usedQuestions.append(question)
-           
-           delegate?.didReceiveNextQuestion(question: question)
-       }
-       
-       // Метод для сброса и перемешивания вопросов при новом запуске игры
-      func resetQuestions() {
-           // Перемешиваем все вопросы
-           availableQuestions = questions.shuffled()
-           // Очищаем историю использованных вопросов
-           usedQuestions.removeAll()
-      }
-   }
-    
+            do {
+                imageData = try Data(contentsOf: movie.resizedImageURL)
+            } catch {
+                print("Failed to load image")
+            //В случае ошибки загрузки изображения, сообщаем об ошибке
+                    DispatchQueue.main.async {
+                          self.delegate?.didFailToLoadData(with: error)
+                     }
+                      return
+                  }
+            
+            let rating = Float(movie.rating) ?? 0
+            
+            let text = "Рейтинг этого фильма больше чем 7?"
+            let correctAnswer = rating > 7
+            
+            let question = QuizQuestion(image: imageData,
+                                         text: text,
+                                         correctAnswer: correctAnswer)
+            
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                self.delegate?.didReceiveNextQuestion(question: question)
+            }
+        }
+    }
+}

@@ -8,8 +8,6 @@
 import Foundation
 
 final class StatisticService {
-    private let storage: UserDefaults = .standard
-    
     private enum Keys: String {
         case gamesCount          // Для счётчика сыгранных игр
         case bestGameCorrect     // Для количества правильных ответов в лучшей игре
@@ -18,6 +16,8 @@ final class StatisticService {
         case totalCorrectAnswers // Для общего количества правильных ответов за все игры
         case totalQuestionsAsked // Для общего количества вопросов, заданных за все игры
     }
+    
+    private let storage: UserDefaults = .standard
     private var totalCorrectAnswers: Int {
             get {
                 storage.integer(forKey: Keys.totalCorrectAnswers.rawValue)
@@ -85,20 +85,23 @@ extension StatisticService: StatisticServiceProtocol {
     
     func store(correct count: Int, total amount: Int) {
         // Обновляем общее количество правильных ответов
-               totalCorrectAnswers += count
+        totalCorrectAnswers += count
                
-               // Обновляем общее количество заданных вопросов
-               totalQuestionsAsked += amount
+        // Обновляем общее количество заданных вопросов
+        totalQuestionsAsked += amount
                
-               // Увеличиваем счетчик игр
-               gamesCount += 1
+        // Увеличиваем счетчик игр
+        gamesCount += 1
                
-               // Проверяем и сохраняем лучший результат
-               let currentGame = GameResult(correct: count, total: amount, date: Date())
+         
+      // Проверяем и сохраняем лучший результат
+         
+        let currentGame = GameResult(correct: count, total: amount, date: Date())
                
-               if currentGame.correct > bestGame.correct {
-                   bestGame = currentGame
-               }
+         
+        if currentGame.correct > bestGame.correct {
+            bestGame = currentGame
+        }
      }
     
     var gamesCount: Int {

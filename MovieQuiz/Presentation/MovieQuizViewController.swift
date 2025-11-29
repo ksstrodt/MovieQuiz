@@ -7,17 +7,21 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     @IBOutlet private var yesButton: UIButton! 
     @IBOutlet private var noButton: UIButton!
     
+    @IBOutlet private var activityIndicator: UIActivityIndicatorView!
     // метод вызывается, когда пользователь нажимает на кнопку "Да"
     @IBAction private func yesButtonClicked(_ sender: UIButton) {
         // Блокируем кнопки сразу при нажатии
         setButtonsEnabled(false)
         
-        guard let currentQuestion = currentQuestion else {
-            return
-        }
-        let givenAnswer = true // 2
+        //guard let currentQuestion = currentQuestion else {
+        //    return
+       // }
+        guard let currentQuestion else {
+                    return
+                }
+        let givenAnswer = true
         
-        showAnswerResult(isCorrect: givenAnswer == currentQuestion.correctAnswer) // 3
+        showAnswerResult(isCorrect: givenAnswer == currentQuestion.correctAnswer)
     }
     
     // метод вызывается, когда пользователь нажимает на кнопку "Нет"
@@ -30,8 +34,19 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         }
         let givenAnswer = false // 2
         
-        showAnswerResult(isCorrect: givenAnswer == currentQuestion.correctAnswer) // 3
+        showAnswerResult(isCorrect: givenAnswer == currentQuestion.correctAnswer)
     }
+    // переменная с индексом текущего вопроса, начальное значение 0
+    // (по этому индексу будем искать вопрос в массиве, где индекс первого элемента 0, а не 1)
+    private var currentQuestionIndex = 0
+    private let questionsAmount: Int = 10
+    private var currentQuestion: QuizQuestion?
+    private var alertPresenter = ResultAlertPresenter()
+    // Добавляем сервис статистики
+    private var statisticService: StatisticServiceProtocol!
+    
+    // переменная со счётчиком правильных ответов, начальное значение закономерно 0
+    private var correctAnswers = 0
     
     // Метод для включения/выключения кнопок
         private func setButtonsEnabled(_ enabled: Bool) {
@@ -41,24 +56,38 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
             yesButton.alpha = enabled ? 1.0 : 0.5
             noButton.alpha = enabled ? 1.0 : 0.5
         }
-    
-    //Исользуем отложенную инициализацию фабрики, чтобы иметь доступ к свойству делегата(delegate) у класса фабрики, ведь в протоколе такого свойства нет.
-    private var questionFactory: QuestionFactoryProtocol?
+   
+
+
 
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
+        // Начальная блокировка кнопок до загрузки данных
+        imageView.backgroundColor = .ypBlack
+        setButtonsEnabled(false)
+        //setupInitialUI()
+        showLoadingIndicator()
         // Инициализируем сервис статистики
         statisticService = StatisticService()
         imageView.layer.cornerRadius = 20
         //Создаём экземпляр фабрики для ее настройки.
-        let questionFactory = QuestionFactory()
-        //Устанавливаем связь фабрика – делегат.
-        questionFactory.delegate = self
-        //Сохраняем подготовленный экземпляр в свойство вью-контроллера, для этого используем обращение через self. Обращение к self нужно, потому что название переменной внутри функции viewDidLoad совпадает с названием свойства класса. Если названия будут различны (вы можете это проверить!), то self можно опустить.
-        self.questionFactory = questionFactory  // 4
-        self.questionFactory?.requestNextQuestion()
+        questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
+        alertPresenter = ResultAlertPresenter()
+        questionFactory?.loadData()
     }
+    
+    func didLoadDataFromServer() {
+        activityIndicator.isHidden = true // скрываем индикатор загрузки
+        questionFactory?.requestNextQuestion()
+    }
+    
+    func didFailToLoadData(with error: Error) {
+        showNetworkError(message: error.localizedDescription) // возьмём в качестве сообщения описание ошибки
+    }
+    //Исользуем отложенную инициализацию фабрики, чтобы иметь доступ к свойству делегата(delegate) у класса фабрики, ведь в протоколе такого свойства нет.
+    private var questionFactory: QuestionFactoryProtocol?
+    
         // MARK: - QuestionFactoryDelegate
         func didReceiveNextQuestion(question: QuizQuestion?) {
             guard let question = question else {
@@ -74,25 +103,13 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         }
     
     
-    // переменная с индексом текущего вопроса, начальное значение 0
-    // (по этому индексу будем искать вопрос в массиве, где индекс первого элемента 0, а не 1)
-    private var currentQuestionIndex = 0
-    private let questionsAmount: Int = 10
-   // private var questionFactory: QuestionFactoryProtocol?
-    private var currentQuestion: QuizQuestion?
-    private var alertPresenter = ResultAlertPresenter()
-    // Добавляем сервис статистики
-    private var statisticService: StatisticServiceProtocol!
-    
-    // переменная со счётчиком правильных ответов, начальное значение закономерно 0
-    private var correctAnswers = 0
+
     // приватный метод конвертации, который принимает моковый вопрос и возвращает вью модель для главного экрана
     private func convert(model: QuizQuestion) -> QuizStepViewModel {
-        let questionStep = QuizStepViewModel( // 1
-            image: UIImage(named: model.image) ?? UIImage(), // 2
-            question: model.text, // 3
-            questionNumber: "\(currentQuestionIndex + 1)/\(questionsAmount)") // 4
-        return questionStep
+        return QuizStepViewModel(
+            image: UIImage(data: model.image) ?? UIImage(),
+            question: model.text,
+            questionNumber: "\(currentQuestionIndex + 1)/\(questionsAmount)")
     }
     // приватный метод вывода на экран вопроса, который принимает на вход вью модель вопроса и ничего не возвращает
     private func show(quiz step: QuizStepViewModel) {
@@ -122,6 +139,36 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
             self.showNextQuestionOrResults()
         }
     }
+    
+    private func hideLoadingIndicator() {
+        activityIndicator.stopAnimating()
+        activityIndicator.isHidden = true
+    }
+    
+    private func showLoadingIndicator() {
+        activityIndicator.isHidden = false // говорим, что индикатор загрузки не скрыт
+        activityIndicator.startAnimating() // включаем анимацию
+        // Делаем кнопки неактивными во время загрузки
+        setButtonsEnabled(false)
+    }
+    
+    private func showNetworkError(message: String) {
+        hideLoadingIndicator()
+        
+        let model = AlertModel(title: "Ошибка",
+                               message: message,
+                               buttonText: "Попробовать еще раз") { [weak self] in
+            guard let self = self else { return }
+            
+            self.currentQuestionIndex = 0
+            self.correctAnswers = 0
+            // Включаем индикатор загрузки и перезагружаем данные
+            self.showLoadingIndicator()
+            self.questionFactory?.loadData() // ← Загружаем данные заново
+             }
+            
+            alertPresenter.show(in: self, model: model)
+        }
     
     // приватный метод, который содержит логику перехода в один из сценариев
     // метод ничего не принимает и ничего не возвращает
@@ -181,7 +228,6 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         private func restartGame() {
             currentQuestionIndex = 0
             correctAnswers = 0
-            questionFactory?.resetQuestions()
             questionFactory?.requestNextQuestion()
         }
 }

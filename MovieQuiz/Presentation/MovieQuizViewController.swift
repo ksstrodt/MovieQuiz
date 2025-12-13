@@ -11,30 +11,17 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     // метод вызывается, когда пользователь нажимает на кнопку "Да"
     @IBAction private func yesButtonClicked(_ sender: UIButton) {
         // Блокируем кнопки сразу при нажатии
-        setButtonsEnabled(false)
-        
-        //guard let currentQuestion = currentQuestion else {
-        //    return
-       // }
-        guard let currentQuestion else {
-                    return
-                }
-        let givenAnswer = true
-        
-        showAnswerResult(isCorrect: givenAnswer == currentQuestion.correctAnswer)
+       // setButtonsEnabled(false)
+        presenter.currentQuestion = currentQuestion
+        presenter.yesButtonClicked()
     }
-    
+        
     // метод вызывается, когда пользователь нажимает на кнопку "Нет"
     @IBAction private func noButtonClicked(_ sender: UIButton) {
         // Блокируем кнопки сразу при нажатии
-        setButtonsEnabled(false)
-        
-        guard let currentQuestion = currentQuestion else {
-            return
-        }
-        let givenAnswer = false // 2
-        
-        showAnswerResult(isCorrect: givenAnswer == currentQuestion.correctAnswer)
+        //setButtonsEnabled(false)
+        presenter.currentQuestion = currentQuestion
+        presenter.noButtonClicked()
     }
 
     private let presenter = MovieQuizPresenter()
@@ -47,7 +34,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     private var correctAnswers = 0
     
     // Метод для включения/выключения кнопок
-        private func setButtonsEnabled(_ enabled: Bool) {
+        func setButtonsEnabled(_ enabled: Bool) {
             yesButton.isEnabled = enabled
             noButton.isEnabled = enabled
             
@@ -73,6 +60,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
         alertPresenter = ResultAlertPresenter()
         questionFactory?.loadData()
+        presenter.viewController = self
     }
     
     func didLoadDataFromServer() {
@@ -125,7 +113,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     
     // приватный метод, который меняет цвет рамки
     // принимает на вход булевое значение и ничего не возвращает
-    private func showAnswerResult(isCorrect: Bool) {
+    func showAnswerResult(isCorrect: Bool) {
         if isCorrect { // 1
                 correctAnswers += 1 // 2
             }

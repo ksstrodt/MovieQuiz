@@ -1,6 +1,6 @@
 import UIKit
 
-final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
+final class MovieQuizViewController: UIViewController /*QuestionFactoryDelegate*/ {
     @IBOutlet private var imageView: UIImageView!
     @IBOutlet private var textLabel: UILabel!
     @IBOutlet private var counterLabel: UILabel!
@@ -9,29 +9,24 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     
     @IBOutlet private var activityIndicator: UIActivityIndicatorView!
     // метод вызывается, когда пользователь нажимает на кнопку "Да"
+    // MARK: - Actions
     @IBAction private func yesButtonClicked(_ sender: UIButton) {
-        // Блокируем кнопки сразу при нажатии
-       // setButtonsEnabled(false)
-        presenter.currentQuestion = currentQuestion
         presenter.yesButtonClicked()
     }
         
     // метод вызывается, когда пользователь нажимает на кнопку "Нет"
     @IBAction private func noButtonClicked(_ sender: UIButton) {
-        // Блокируем кнопки сразу при нажатии
-        //setButtonsEnabled(false)
-        presenter.currentQuestion = currentQuestion
         presenter.noButtonClicked()
     }
 
-    private let presenter = MovieQuizPresenter()
+    private var presenter: MovieQuizPresenter!
     private var currentQuestion: QuizQuestion?
     private var alertPresenter = ResultAlertPresenter()
     // Добавляем сервис статистики
     private var statisticService: StatisticServiceProtocol!
     
     // переменная со счётчиком правильных ответов, начальное значение закономерно 0
-    private var correctAnswers = 0
+   // private var correctAnswers = 0
     
     // Метод для включения/выключения кнопок
         func setButtonsEnabled(_ enabled: Bool) {
@@ -57,49 +52,33 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         statisticService = StatisticService()
         imageView.layer.cornerRadius = 20
         //Создаём экземпляр фабрики для ее настройки.
-        questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
+        //presenter.questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
         alertPresenter = ResultAlertPresenter()
-        questionFactory?.loadData()
-        presenter.viewController = self
+        //presenter.questionFactory?.loadData()
+        //presenter.viewController = self
+        presenter = MovieQuizPresenter(viewController: self)
     }
     
-    func didLoadDataFromServer() {
+   /* func didLoadDataFromServer() {
         activityIndicator.isHidden = true // скрываем индикатор загрузки
         questionFactory?.requestNextQuestion()
-    }
-    
-    func didFailToLoadData(with error: Error) {
-        showNetworkError(message: error.localizedDescription) // возьмём в качестве сообщения описание ошибки
-    }
-    //Исользуем отложенную инициализацию фабрики, чтобы иметь доступ к свойству делегата(delegate) у класса фабрики, ведь в протоколе такого свойства нет.
-    private var questionFactory: QuestionFactoryProtocol?
-    
-        // MARK: - QuestionFactoryDelegate
-        func didReceiveNextQuestion(question: QuizQuestion?) {
-            guard let question = question else {
-                return
-            }
-
-            currentQuestion = question
-            let viewModel = presenter.convert(model: question)
-            
-            DispatchQueue.main.async { [weak self] in
-                self?.show(quiz: viewModel)
-            }
-        }
-    
-    
-
-    // приватный метод конвертации, который принимает моковый вопрос и возвращает вью модель для главного экрана
-  /*  private func convert(model: QuizQuestion) -> QuizStepViewModel {
-        return QuizStepViewModel(
-            image: UIImage(data: model.image) ?? UIImage(),
-            question: model.text,
-            questionNumber: "\(currentQuestionIndex + 1)/\(questionsAmount)")
     }*/
     
+  /*  func didFailToLoadData(with error: Error) {
+        showNetworkError(message: error.localizedDescription) // возьмём в качестве сообщения описание ошибки
+    }*/
+    
+    //Исользуем отложенную инициализацию фабрики, чтобы иметь доступ к свойству делегата(delegate) у класса фабрики, ведь в протоколе такого свойства нет.
+   // private var questionFactory: QuestionFactoryProtocol?
+    
+        // MARK: - QuestionFactoryDelegate
+     /*   func didReceiveNextQuestion(question: QuizQuestion?) {
+            presenter.didReceiveNextQuestion(question: question)
+        } */
+    
     // приватный метод вывода на экран вопроса, который принимает на вход вью модель вопроса и ничего не возвращает
-    private func show(quiz step: QuizStepViewModel) {
+    // MARK: - Private function
+    func show(quiz step: QuizStepViewModel) {
         imageView.layer.borderWidth = 0
         imageView.layer.borderColor = UIColor.clear.cgColor
         
@@ -113,33 +92,41 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     
     // приватный метод, который меняет цвет рамки
     // принимает на вход булевое значение и ничего не возвращает
-    func showAnswerResult(isCorrect: Bool) {
-        if isCorrect { // 1
-                correctAnswers += 1 // 2
-            }
+  /*  func showAnswerResult(isCorrect: Bool) {
+        //if isCorrect { // 1
+          //      correctAnswers += 1 // 2
+         //   }
+        presenter.didAnswer(isCorrectAnswer: isCorrect)
         
         imageView.layer.masksToBounds = true // 1
         imageView.layer.borderWidth = 8 // 2
         imageView.layer.borderColor = isCorrect ? UIColor.ypGreen.cgColor : UIColor.ypRed.cgColor // 3
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            self.showNextQuestionOrResults()
+            //self.presenter.questionFactory = self.questionFactory
+            self.presenter.showNextQuestionOrResults()
         }
-    }
+    }*/
     
-    private func hideLoadingIndicator() {
+    func highlightImageBorder(isCorrectAnswer: Bool) {
+           imageView.layer.masksToBounds = true
+           imageView.layer.borderWidth = 8
+           imageView.layer.borderColor = isCorrectAnswer ? UIColor.ypGreen.cgColor : UIColor.ypRed.cgColor
+       }
+    
+    func hideLoadingIndicator() {
         activityIndicator.stopAnimating()
         activityIndicator.isHidden = true
     }
     
-    private func showLoadingIndicator() {
+    func showLoadingIndicator() {
         activityIndicator.isHidden = false // говорим, что индикатор загрузки не скрыт
         activityIndicator.startAnimating() // включаем анимацию
         // Делаем кнопки неактивными во время загрузки
         setButtonsEnabled(false)
     }
     
-    private func showNetworkError(message: String) {
+    func showNetworkError(message: String) {
         hideLoadingIndicator()
         
         let model = AlertModel(title: "Ошибка",
@@ -147,11 +134,10 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
                                buttonText: "Попробовать еще раз") { [weak self] in
             guard let self = self else { return }
             
-            self.presenter.resetQuestionIndex()
-            self.correctAnswers = 0
+            self.presenter.restartGame()
             // Включаем индикатор загрузки и перезагружаем данные
             self.showLoadingIndicator()
-            self.questionFactory?.loadData() // ← Загружаем данные заново
+            self.presenter.questionFactory?.loadData() // ← Загружаем данные заново
              }
             
             alertPresenter.show(in: self, model: model)
@@ -159,10 +145,10 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     
     // приватный метод, который содержит логику перехода в один из сценариев
     // метод ничего не принимает и ничего не возвращает
-    private func showNextQuestionOrResults() {
+    /*private func showNextQuestionOrResults() {
         if presenter.isLastQuestion() {
             // Сохраняем результаты в статистику
-            statisticService.store(correct: correctAnswers, total: presenter.questionsAmount)
+            statisticService.store(correct: presenter.correctAnswers, total: presenter.questionsAmount)
             // Получаем статистику для отображения
                        let bestGame = statisticService.bestGame
                        let totalGames = statisticService.gamesCount
@@ -174,7 +160,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
                        let bestGameDate = dateFormatter.string(from: bestGame.date)
             
             // Формируем текст с результатами и статистикой
-            let currentResultText = "Ваш результат: \(correctAnswers)/\(presenter.questionsAmount)"
+            let currentResultText = "Ваш результат: \(presenter.correctAnswers)/\(presenter.questionsAmount)"
                         let message = """
                         \(currentResultText)
                         Количество сыгранных квизов: \(totalGames)
@@ -188,13 +174,13 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
             show(quiz: viewModel) // 3
         } else {
             presenter.switchToNextQuestion()
-            questionFactory?.requestNextQuestion()
+            presenter.questionFactory?.requestNextQuestion()
         }
-    }
+    }*/
     
     // приватный метод для показа результатов раунда квиза
     // принимает вью модель QuizResultsViewModel и ничего не возвращает
-    private func show(quiz result: QuizResultsViewModel) {
+    func show(quiz result: QuizResultsViewModel) {
             // Используем текст из viewModel вместо вызова несуществующего метода
             let message = result.text
             
@@ -204,7 +190,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
                 buttonText: result.buttonText
             ) { [weak self] in
                 guard let self = self else { return }
-                self.restartGame()
+                self.presenter.restartGame()
             }
             
             // Используем правильное имя переменной alertPresenter
@@ -212,11 +198,10 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         }
         
         // Добавляем метод для перезапуска игры
-        private func restartGame() {
-            presenter.resetQuestionIndex()
-            correctAnswers = 0
-            questionFactory?.requestNextQuestion()
-        }
+        //private func restartGame() {
+         //   self.presenter.restartGame()
+            //questionFactory?.requestNextQuestion()
+       // }
 }
 
 /*

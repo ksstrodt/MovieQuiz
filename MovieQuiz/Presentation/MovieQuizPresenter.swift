@@ -16,9 +16,9 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
     private var correctAnswers: Int = 0
     var questionFactory: QuestionFactoryProtocol?
     
-    private weak var viewController: MovieQuizViewController?
+    private weak var viewController: MovieQuizViewControllerProtocol?
     
-    init(viewController: MovieQuizViewController) {
+    init(viewController: MovieQuizViewControllerProtocol) {
             self.viewController = viewController
             
             statisticService = StatisticService()
@@ -65,7 +65,6 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
     func restartGame() {
         currentQuestionIndex = 0
         correctAnswers = 0
-        questionFactory?.requestNextQuestion()
     }
     
     func switchToNextQuestion() {
@@ -102,15 +101,12 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
     // приватный метод, который меняет цвет рамки
     // принимает на вход булевое значение и ничего не возвращает
     func proceedWithAnswer(isCorrect: Bool) {
-        //if isCorrect { // 1
-          //      correctAnswers += 1 // 2
-         //   }
+    
         didAnswer(isCorrectAnswer: isCorrect)
         
         viewController?.highlightImageBorder(isCorrectAnswer: isCorrect)
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            //self.presenter.questionFactory = self.questionFactory
             self.proceedToNextQuestionOrResults()
         }
     }
